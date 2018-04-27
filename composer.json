@@ -1,0 +1,10 @@
+{
+    "name": "digit-soft/re-action-event-emitter",
+    "keywords": ["event-dispatcher", "event-emitter", "re-action"],
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Reaction\\Events\\": "src"
+        }
+    },
+}
