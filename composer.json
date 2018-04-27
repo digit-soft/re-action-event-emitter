@@ -15,7 +15,8 @@
     "minimum-stability": "dev",
     "require": {
         "php": ">=7.0",
-        "evenement/evenement": "*"
+        "digit-soft/re-action": "*",
+        "evenement/evenement": "^3.0"
     },
     "autoload": {
         "psr-4": {
