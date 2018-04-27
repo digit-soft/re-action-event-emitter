@@ -2,6 +2,7 @@
     "name": "digit-soft/re-action-event-emitter",
     "keywords": ["digit-soft", "reactphp", "event-dispatcher", "event-emitter", "re-action"],
     "license": "MIT",
+    "version": "1.0.0",
     "support": {
         "issues": "https://github.com/digit-soft/re-action-event-emitter/issues",
         "source": "https://github.com/digit-soft/re-action-event-emitter"
