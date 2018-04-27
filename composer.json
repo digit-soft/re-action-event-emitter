@@ -15,7 +15,6 @@
     "minimum-stability": "dev",
     "require": {
         "php": ">=7.0",
-        "digit-soft/re-action": "*",
         "evenement/evenement": "^3.0"
     },
     "autoload": {
