@@ -2,6 +2,11 @@
 
 namespace Reaction\Events;
 
+/**
+ * Trait EventEmitterWildcardTrait.
+ * Use it with your classes implement EventEmitterWildcardInterface
+ * @package Reaction\Events
+ */
 trait EventEmitterWildcardTrait
 {
     protected $listeners = [];
@@ -74,25 +79,10 @@ trait EventEmitterWildcardTrait
             throw new \InvalidArgumentException('Event name must not be null');
         }
 
-        if (isset($this->listeners[$event])) {
-            $index = \array_search($listener, $this->listeners[$event], true);
-            if (false !== $index) {
-                unset($this->listeners[$event][$index]);
-                if (\count($this->listeners[$event]) === 0) {
-                    unset($this->listeners[$event]);
-                }
-            }
-        }
-
-        if (isset($this->onceListeners[$event])) {
-            $index = \array_search($listener, $this->onceListeners[$event], true);
-            if (false !== $index) {
-                unset($this->onceListeners[$event][$index]);
-                if (\count($this->onceListeners[$event]) === 0) {
-                    unset($this->onceListeners[$event]);
-                }
-            }
-        }
+        $this->removeListenerInternal($event, $listener);
+        $this->removeListenerInternal($event, $listener, self::LISTENERS_GROUP_ONCE);
+        $this->removeListenerInternal($event, $listener, self::LISTENERS_GROUP_WLC);
+        $this->removeListenerInternal($event, $listener, self::LISTENERS_GROUP_WLC_ONCE);
     }
 
     /**
@@ -101,16 +91,19 @@ trait EventEmitterWildcardTrait
      */
     public function removeAllListeners($event = null)
     {
+        $groups = [
+            static::LISTENERS_GROUP_DEFAULT, static::LISTENERS_GROUP_ONCE,
+            static::LISTENERS_GROUP_WLC, static::LISTENERS_GROUP_WLC_ONCE,
+        ];
         if ($event !== null) {
-            unset($this->listeners[$event]);
+            foreach ($groups as $group) {
+                if (!isset($this->{$group}[$event])) continue;
+                unset($this->listeners[$event]);
+            }
         } else {
-            $this->listeners = [];
-        }
-
-        if ($event !== null) {
-            unset($this->onceListeners[$event]);
-        } else {
-            $this->onceListeners = [];
+            foreach ($groups as $group) {
+                $this->{$group} = null;
+            }
         }
     }
 
@@ -135,9 +128,14 @@ trait EventEmitterWildcardTrait
             return $events;
         }
 
+        $wlc = $this->findWildcardListeners(null, self::LISTENERS_GROUP_WLC);
+        $wlcOnce = $this->findWildcardListeners(null, self::LISTENERS_GROUP_WLC_ONCE);
+
         return \array_merge(
             isset($this->listeners[$event]) ? $this->listeners[$event] : [],
-            isset($this->onceListeners[$event]) ? $this->onceListeners[$event] : []
+            isset($this->onceListeners[$event]) ? $this->onceListeners[$event] : [],
+            $wlc,
+            $wlcOnce
         );
     }
 
@@ -176,7 +174,7 @@ trait EventEmitterWildcardTrait
             }
         }
         //Wildcard listeners (once)
-        $listenersOnceWc = $this->findWildcardListeners($event, 'onceListenersWildcard');
+        $listenersOnceWc = $this->findWildcardListeners($event, self::LISTENERS_GROUP_WLC_ONCE);
         if (!empty($listenersOnceWc)) {
             foreach ($listenersOnceWc as $eventName => $listeners) {
                 unset($this->onceListenersWildcard[$eventName]);
@@ -220,6 +218,26 @@ trait EventEmitterWildcardTrait
     }
 
     /**
+     * Remove listener
+     * @internal
+     * @param string   $event
+     * @param callable $listener
+     * @param string   $listenersKey
+     */
+    protected function removeListenerInternal($event, callable $listener, $listenersKey = self::LISTENERS_GROUP_DEFAULT) {
+        $listeners = &$this->{$listenersKey};
+        if (isset($listeners[$event])) {
+            $index = \array_search($listener, $listeners[$event], true);
+            if (false !== $index) {
+                unset($listeners[$event][$index]);
+                if (\count($listeners[$event]) === 0) {
+                    unset($listeners[$event]);
+                }
+            }
+        }
+    }
+
+    /**
      * Process event name and find wildcards and regex
      * @param string $event
      * @return array
@@ -253,16 +271,16 @@ trait EventEmitterWildcardTrait
 
     /**
      * Find wildcard event handlers
-     * @param string $event
-     * @param string $listenersKey
+     * @param string|null $event
+     * @param string      $listenersKey
      * @return array
      */
-    protected function findWildcardListeners($event, $listenersKey = 'listenersWildcard') {
+    protected function findWildcardListeners($event = null, $listenersKey = self::LISTENERS_GROUP_WLC) {
         $listeners = [];
         $keys = array_keys($this->{$listenersKey});
         if (!empty($keys)) {
             foreach ($keys as $key) {
-                if (preg_match($key, $event)) {
+                if ($event === null || preg_match($key, $event)) {
                     $listeners[$key] = $this->{$listenersKey}[$key];
                 }
             }
