@@ -1,7 +1,22 @@
 {
     "name": "digit-soft/re-action-event-emitter",
-    "keywords": ["event-dispatcher", "event-emitter", "re-action"],
+    "keywords": ["digit-soft", "reactphp", "event-dispatcher", "event-emitter", "re-action"],
     "license": "MIT",
+    "support": {
+        "issues": "https://github.com/digit-soft/re-action-event-emitter/issues",
+        "source": "https://github.com/digit-soft/re-action-event-emitter"
+    },
+    "authors": [
+        {
+            "name": "Digit",
+            "email": "digit.vova@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=7.0",
+        "evenement/evenement": "*"
+    },
     "autoload": {
         "psr-4": {
             "Reaction\\Events\\": "src"
