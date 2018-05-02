@@ -2,9 +2,11 @@
 
 namespace Reaction\Events;
 
+use React\Promise\PromiseInterface;
+
 /**
  * Trait EventEmitterWildcardTrait.
- * Use it with your classes implement EventEmitterWildcardInterface
+ * Use it with your classes to implement EventEmitterWildcardInterface
  * @package Reaction\Events
  */
 trait EventEmitterWildcardTrait
@@ -70,7 +72,7 @@ trait EventEmitterWildcardTrait
 
     /**
      * Remove listener for event
-     * @param string $event
+     * @param string   $event
      * @param callable $listener
      */
     public function removeListener($event, callable $listener)
@@ -183,6 +185,77 @@ trait EventEmitterWildcardTrait
                 }
             }
         }
+    }
+
+    /**
+     * Emits an event and returns Promise, which will be resolved
+     * when all listeners complete their work
+     *
+     * @param string $event
+     * @param array $arguments
+     * @param int   $timeout
+     * @return PromiseInterface
+     */
+    public function emitAndWait($event, array $arguments = [], $timeout = 10) {
+        if ($event === null) {
+            throw new \InvalidArgumentException('Event name must not be null');
+        }
+        $results = [];
+
+        if (isset($this->listeners[$event])) {
+            foreach ($this->listeners[$event] as $listener) {
+                $results[] = $listener(...$arguments);
+            }
+        }
+
+        if (isset($this->onceListeners[$event])) {
+            $listeners = $this->onceListeners[$event];
+            unset($this->onceListeners[$event]);
+            foreach ($listeners as $listener) {
+                $results[] = $listener(...$arguments);
+            }
+        }
+
+        //Wildcard listeners
+        $listenersWc = $this->findWildcardListeners($event);
+        if (!empty($listenersWc)) {
+            foreach ($listenersWc as $eventName => $listeners) {
+                foreach ($listeners as $listener) {
+                    $results[] = $listener(...$arguments);
+                }
+            }
+        }
+        //Wildcard listeners (once)
+        $listenersOnceWc = $this->findWildcardListeners($event, self::LISTENERS_GROUP_WLC_ONCE);
+        if (!empty($listenersOnceWc)) {
+            foreach ($listenersOnceWc as $eventName => $listeners) {
+                unset($this->onceListenersWildcard[$eventName]);
+                foreach ($listeners as $listener) {
+                    $results[] = $listener(...$arguments);
+                }
+            }
+        }
+
+        $promises = [];
+        $prCallback = function () { return true; };
+        foreach ($results as $result) {
+            if ($result !== null && $result instanceof PromiseInterface) {
+                $promises[] = $result->then($prCallback, $prCallback);
+            }
+        }
+
+        $reactionUsed = function_exists('Reaction\Promise\resolve');
+        if (empty($promises)) {
+            return $reactionUsed ? \Reaction\Promise\resolve(true) : \React\Promise\resolve(true);
+        }
+
+        $allPromise = $reactionUsed ? \Reaction\Promise\all($promises) : \React\Promise\all($promises);
+
+        if ($reactionUsed) {
+            \Reaction::$app->loop->addTimer($timeout, function () use ($allPromise) { $allPromise->cancel(); });
+        }
+
+        return $allPromise;
     }
 
     /**
