@@ -2,6 +2,7 @@
 
 namespace Reaction\Events;
 
+use React\EventLoop\LoopInterface;
 use React\Promise\PromiseInterface;
 
 /**
@@ -251,7 +252,7 @@ trait EventEmitterWildcardTrait
 
         $allPromise = $reactionUsed ? \Reaction\Promise\all($promises) : \React\Promise\all($promises);
 
-        if ($reactionUsed) {
+        if ($reactionUsed && \Reaction::$app && \Reaction::$app->loop instanceof LoopInterface) {
             \Reaction::$app->loop->addTimer($timeout, function () use ($allPromise) { $allPromise->cancel(); });
         }
 
